@@ -9,10 +9,14 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <header class="topbar">
   <div class="brand">
     <span class="mark">C</span>
-    <div><b>CAPRI</b><small>PROJECT CAPRICORN // MOBILE</small></div>
+    <div>
+      <b>CAPRI</b>
+      <small>PROJECT CAPRICORN // MOBILE</small>
+    </div>
   </div>
   <button id="settingsOpen" class="iconbtn" aria-label="Settings">⚙</button>
 </header>
@@ -20,7 +24,10 @@
 <main>
   <section class="stage">
     <div class="scanlines"></div>
-    <div class="status"><i></i><span id="mood">ONLINE // IDLE</span></div>
+    <div class="status">
+      <i></i>
+      <span id="mood">ONLINE // IDLE</span>
+    </div>
 
     <div class="portrait-frame" id="character">
       <div class="portrait-glow"></div>
@@ -28,7 +35,10 @@
       <div class="portrait-label">/// CAPRI.EXE</div>
     </div>
 
-    <div class="speech" id="speech">Hey, choom. Your phone's got room for one more menace.</div>
+    <div class="speech" id="speech">
+      Hey, choom. Your phone's got room for one more menace.
+    </div>
+
     <div class="stage-foot">
       <span>LOCAL COMPANION</span>
       <span>v0.2.0 // ANDROID</span>
@@ -36,9 +46,18 @@
   </section>
 
   <section class="chat-area">
-    <div class="chat-head">
-      <div><b>DIRECT LINK</b><small>Talk to Capri</small></div>
-      <span class="live">● READY</span>
+    <div class="chat-head" id="chat-head">
+      <div>
+        <b>DIRECT LINK</b>
+        <small>Talk to Capri</small>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button id="voiceToggle" class="iconbtn" type="button">
+          VOICE ON
+        </button>
+        <span class="live">● READY</span>
+      </div>
     </div>
 
     <div id="messages" class="messages">
@@ -49,23 +68,46 @@
     </div>
 
     <form id="chatForm" class="composer">
-      <input id="prompt" autocomplete="off" maxlength="2000" placeholder="Send a message..." aria-label="Message">
+      <input id="prompt" autocomplete="off" maxlength="2000"
+        placeholder="Send a message..." aria-label="Message">
       <button id="send" type="submit">SEND ↗</button>
     </form>
-    <p class="hint">Your API key stays in memory for this session. It is not saved to disk.</p>
+
+    <p class="hint">
+      Your API key stays in memory for this session. It is not saved to disk.
+    </p>
   </section>
 </main>
 
 <div id="settings" class="modal hidden">
   <div class="sheet">
     <div class="sheet-head">
-      <div><b>LINK SETTINGS</b><small>OpenAI-compatible chat API</small></div>
+      <div>
+        <b>LINK SETTINGS</b>
+        <small>OpenAI-compatible chat API</small>
+      </div>
       <button id="settingsClose" class="iconbtn">✕</button>
     </div>
-    <label>API BASE URL<input id="baseUrl" placeholder="https://api.openai.com/v1"></label>
-    <label>MODEL<input id="model" placeholder="gpt-4o-mini"></label>
-    <label>API KEY <span class="muted">(session only)</span><input id="apiKey" type="password" placeholder="API key"></label>
-    <p class="warning">Use an HTTPS provider endpoint. Your key is sent to that provider when you chat. Avoid sharing your APK with a key entered.</p>
+
+    <label>
+      API BASE URL
+      <input id="baseUrl" placeholder="https://api.openai.com/v1">
+    </label>
+
+    <label>
+      MODEL
+      <input id="model" placeholder="gpt-4o-mini">
+    </label>
+
+    <label>
+      API KEY <span class="muted">(session only)</span>
+      <input id="apiKey" type="password" placeholder="API key">
+    </label>
+
+    <p class="warning">
+      Use an HTTPS provider endpoint. Your key is sent to that provider when you chat. Avoid sharing your APK with a key entered.
+    </p>
+
     <button id="saveSettings" class="primary wide">SAVE SETTINGS</button>
     <button id="testSettings" class="secondary wide">TEST CONNECTION</button>
   </div>
