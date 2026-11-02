@@ -23,10 +23,7 @@ const expressions = {
 
 // VOICE CONTROL
 
-const voiceButton = $("voiceToggle");
-
-
-$("chat-head")?.appendChild(voiceButton);
+const voiceButton = $("voiceToggle")
 
 function updateVoiceButton() {
   voiceButton.textContent = voiceEnabled ? "VOICE ON" : "VOICE OFF";
