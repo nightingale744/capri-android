@@ -23,13 +23,8 @@ const expressions = {
 
 // VOICE CONTROL
 
-const voiceButton = document.createElement("button");
+const voiceButton = $("voiceToggle");
 
-voiceButton.id = "voiceToggle";
-voiceButton.className = "iconbtn";
-voiceButton.type = "button";
-voiceButton.style.fontSize = "12px";
-voiceButton.style.padding = "8px 12px";
 
 $("chat-head")?.appendChild(voiceButton);
 
