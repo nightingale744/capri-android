@@ -46,5 +46,50 @@ button,input{font:inherit}
 .wide{width:100%;padding:14px;margin-top:9px}
 .secondary{background:#282832;color:var(--text);border:1px solid #51515c}
 .primary:disabled{opacity:.5}
+
+/* CAPRI VOICE BUTTON */
+
+#voiceToggle {
+  width: auto;
+  min-width: 76px;
+  height: 32px;
+  padding: 0 10px;
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: .08em;
+  white-space: nowrap;
+  border: 1px solid var(--cyan);
+  background: #202027;
+  color: var(--cyan);
+}
+
+#voiceToggle:active {
+  background: var(--cyan);
+  color: #111;
+}
+
 @media(min-width:650px){main{max-width:620px;margin:0 auto}.stage{height:440px}.messages{height:240px}.chat-area{padding-top:22px}}
+
                           
+/* CAPRI VOICE BUTTON */
+
+#voiceToggle {
+  width: auto;
+  min-width: 76px;
+  height: 32px;
+  padding: 0 10px;
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: .08em;
+  white-space: nowrap;
+  border: 1px solid var(--cyan);
+  background: #202027;
+  color: var(--cyan);
+}
+
+#voiceToggle:active {
+  background: var(--cyan);
+  color: #111;
+}
