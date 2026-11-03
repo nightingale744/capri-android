@@ -1,3 +1,4 @@
+
 package com.capri.mobile;
 
 import android.app.Activity;
@@ -97,7 +98,6 @@ public class MainActivity extends Activity {
         );
 
         setContentView(webView);
-
         webView.loadUrl("file:///android_asset/index.html");
     }
 
@@ -146,19 +146,20 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-public boolean saveFishToken(String token) {
-    try {
-        saveEncryptedToken(token);
-        return true;
-    } catch (Exception e) {
-        android.util.Log.e(
-                "Capri",
-                "Could not save Fish Audio token",
-                e
-        );
-        return false;
-    }
-}
+        public boolean saveFishToken(String token) {
+            try {
+                saveEncryptedToken(token);
+                return true;
+            } catch (Exception e) {
+                android.util.Log.e(
+                        "Capri",
+                        "Could not save Fish Audio token",
+                        e
+                );
+                return false;
+            }
+        }
+
         @JavascriptInterface
         public void speakFishAudio(String text) {
             if (text == null || text.trim().isEmpty()) return;
@@ -453,137 +454,137 @@ public boolean saveFishToken(String token) {
 
         return generator.generateKey();
     }
-    
-private JSONObject performChat(JSONObject input)
-        throws Exception {
 
-    String base = input.getString("baseUrl").trim();
-    String model = input.getString("model").trim();
-    String apiKey = input.optString("apiKey", "").trim();
+    private JSONObject performChat(JSONObject input)
+            throws Exception {
 
-    if (!base.startsWith("https://")) {
-        throw new Exception("Use an HTTPS API endpoint.");
-    }
+        String base = input.getString("baseUrl").trim();
+        String model = input.getString("model").trim();
+        String apiKey = input.optString("apiKey", "").trim();
 
-    if (model.isEmpty()) {
-        throw new Exception("Enter a model name in Settings.");
-    }
-
-    String endpoint =
-            base.replaceAll("/+$", "")
-            + "/chat/completions";
-
-    JSONObject body = new JSONObject();
-    body.put("model", model);
-    body.put("messages", input.getJSONArray("messages"));
-    body.put("temperature", 0.8);
-
-    HttpURLConnection conn =
-            (HttpURLConnection)
-            new URL(endpoint).openConnection();
-
-    conn.setRequestMethod("POST");
-    conn.setConnectTimeout(20000);
-    conn.setReadTimeout(90000);
-    conn.setDoOutput(true);
-
-    conn.setRequestProperty(
-            "Content-Type",
-            "application/json"
-    );
-
-    if (!apiKey.isEmpty()) {
-        conn.setRequestProperty(
-                "Authorization",
-                "Bearer " + apiKey
-        );
-    }
-
-    byte[] bytes =
-            body.toString().getBytes(StandardCharsets.UTF_8);
-
-    try (OutputStream out = conn.getOutputStream()) {
-        out.write(bytes);
-    }
-
-    int status = conn.getResponseCode();
-
-    InputStream stream =
-            status >= 200 && status < 300
-                    ? conn.getInputStream()
-                    : conn.getErrorStream();
-
-    if (stream == null) {
-        conn.disconnect();
-        throw new Exception("HTTP " + status + ": Empty response");
-    }
-
-    String responseText = readText(stream);
-    conn.disconnect();
-
-    JSONObject response;
-
-    try {
-        response = new JSONObject(responseText);
-    } catch (Exception e) {
-        throw new Exception(
-                "API returned non-JSON data. HTTP " + status
-                + ": " + responseText.substring(
-                        0, Math.min(300, responseText.length())
-                )
-        );
-    }
-
-    if (status < 200 || status >= 300) {
-        Object error = response.opt("error");
-        String message = "HTTP " + status;
-
-        if (error instanceof JSONObject) {
-            message = ((JSONObject) error)
-                    .optString("message", message);
-        } else if (error instanceof String) {
-            message = (String) error;
+        if (!base.startsWith("https://")) {
+            throw new Exception("Use an HTTPS API endpoint.");
         }
 
-        throw new Exception(message);
-    }
+        if (model.isEmpty()) {
+            throw new Exception("Enter a model name in Settings.");
+        }
 
-    org.json.JSONArray choices =
-            response.optJSONArray("choices");
+        String endpoint =
+                base.replaceAll("/+$", "")
+                + "/chat/completions";
 
-    if (choices == null || choices.length() == 0) {
-        throw new Exception(
-                "API response has no choices: " + responseText
+        JSONObject body = new JSONObject();
+        body.put("model", model);
+        body.put("messages", input.getJSONArray("messages"));
+        body.put("temperature", 0.8);
+
+        HttpURLConnection conn =
+                (HttpURLConnection)
+                new URL(endpoint).openConnection();
+
+        conn.setRequestMethod("POST");
+        conn.setConnectTimeout(20000);
+        conn.setReadTimeout(90000);
+        conn.setDoOutput(true);
+
+        conn.setRequestProperty(
+                "Content-Type",
+                "application/json"
         );
+
+        if (!apiKey.isEmpty()) {
+            conn.setRequestProperty(
+                    "Authorization",
+                    "Bearer " + apiKey
+            );
+        }
+
+        byte[] bytes =
+                body.toString().getBytes(StandardCharsets.UTF_8);
+
+        try (OutputStream out = conn.getOutputStream()) {
+            out.write(bytes);
+        }
+
+        int status = conn.getResponseCode();
+
+        InputStream stream =
+                status >= 200 && status < 300
+                        ? conn.getInputStream()
+                        : conn.getErrorStream();
+
+        if (stream == null) {
+            conn.disconnect();
+            throw new Exception("HTTP " + status + ": Empty response");
+        }
+
+        String responseText = readText(stream);
+        conn.disconnect();
+
+        JSONObject response;
+
+        try {
+            response = new JSONObject(responseText);
+        } catch (Exception e) {
+            throw new Exception(
+                    "API returned non-JSON data. HTTP " + status
+                    + ": " + responseText.substring(
+                            0, Math.min(300, responseText.length())
+                    )
+            );
+        }
+
+        if (status < 200 || status >= 300) {
+            Object error = response.opt("error");
+            String message = "HTTP " + status;
+
+            if (error instanceof JSONObject) {
+                message = ((JSONObject) error)
+                        .optString("message", message);
+            } else if (error instanceof String) {
+                message = (String) error;
+            }
+
+            throw new Exception(message);
+        }
+
+        org.json.JSONArray choices =
+                response.optJSONArray("choices");
+
+        if (choices == null || choices.length() == 0) {
+            throw new Exception(
+                    "API response has no choices."
+            );
+        }
+
+        JSONObject choice = choices.optJSONObject(0);
+
+        if (choice == null) {
+            throw new Exception("API returned an invalid choice.");
+        }
+
+        Object message = choice.opt("message");
+        String answer = "";
+
+        if (message instanceof JSONObject) {
+            answer = ((JSONObject) message)
+                    .optString("content", "");
+        } else if (message instanceof String) {
+            answer = (String) message;
+        }
+
+        if (answer.trim().isEmpty()) {
+            throw new Exception(
+                    "API returned no readable message."
+            );
+        }
+
+        JSONObject result = new JSONObject();
+        result.put("content", answer);
+
+        return result;
     }
-
-    JSONObject choice = choices.optJSONObject(0);
-
-    if (choice == null) {
-        throw new Exception("API returned an invalid choice.");
-    }
-
-    Object message = choice.opt("message");
-    String answer = "";
-
-    if (message instanceof JSONObject) {
-        answer = ((JSONObject) message)
-                .optString("content", "");
-    } else if (message instanceof String) {
-        answer = (String) message;
-    }
-
-    if (answer.trim().isEmpty()) {
-        throw new Exception(
-                "API returned no readable message."
-        );
-    }
-
-    JSONObject result = new JSONObject();
-    result.put("content", answer);
-
-    return result;
-}
 
     @Override
     public void onBackPressed() {
@@ -615,4 +616,4 @@ private JSONObject performChat(JSONObject input)
 
         super.onDestroy();
     }
-}
+                                                  }
