@@ -702,38 +702,23 @@ try {
     );
 }
 
-JSONArray choices = response.optJSONArray("choices");
-
-if (choices == null || choices.length() == 0) {
+if (status < 200 || status >= 300) {
     throw new Exception(
-            "Provider returned no chat choices: " + responseText
+            "API error HTTP " + status + ": " + responseText
     );
 }
 
-JSONObject choice = choices.getJSONObject(0);
-JSONObject message = choice.optJSONObject("message");
-
-if (message == null) {
-    throw new Exception("Provider response has no message.");
-}
-
-String content = message.optString("content", "").trim();
-
-if (content.isEmpty()) {
-    throw new Exception("Provider returned an empty message.");
-}
-
-return content;
+return response;
 }
 
 @Override
 protected void onDestroy() {
     stopAudioPlayback();
 
-    if (tts != null) {
-        tts.stop();
-        tts.shutdown();
-        tts = null;
+    if (textToSpeech != null) {
+        textToSpeech.stop();
+        textToSpeech.shutdown();
+        textToSpeech = null;
     }
 
     if (webView != null) {
