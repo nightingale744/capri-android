@@ -23,7 +23,7 @@ const expressions = {
 
 // VOICE CONTROL
 
-const voiceButton = $("voiceToggle")
+const voiceButton = $("voiceToggle");
 
 function updateVoiceButton() {
   voiceButton.textContent = voiceEnabled ? "VOICE ON" : "VOICE OFF";
@@ -37,9 +37,11 @@ function speak(text) {
   if (!voiceEnabled || !window.CapriNative) return;
 
   try {
-    window.CapriNative.speak(text);
+    window.CapriNative.speakFishAudio(text);
   } catch (error) {
-    console.error("Capri voice error:", error);
+    console.error("Capri Fish Audio error:", error);
+    $("fishTokenStatus").textContent =
+      "Voice request failed. Check your connection.";
   }
 }
 
@@ -67,6 +69,39 @@ voiceButton.onclick = () => {
 };
 
 updateVoiceButton();
+
+// FISH AUDIO TOKEN
+
+$("saveFishToken").onclick = () => {
+  const token = $("fishToken").value.trim();
+
+  if (!token) {
+    $("fishTokenStatus").textContent =
+      "Enter your Fish Audio token first.";
+    return;
+  }
+
+  if (!window.CapriNative) {
+    $("fishTokenStatus").textContent =
+      "Android bridge unavailable.";
+    return;
+  }
+
+  try {
+    window.CapriNative.saveFishToken(token);
+
+    $("fishToken").value = "";
+
+    $("fishTokenStatus").textContent =
+      "Save request sent to Android. Test voice with a chat reply.";
+
+  } catch (error) {
+    console.error("Token save error:", error);
+
+    $("fishTokenStatus").textContent =
+      "Could not send token to Android.";
+  }
+};
 
 // EXPRESSIONS
 
