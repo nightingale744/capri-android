@@ -1,8 +1,10 @@
-
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:theme="@style/AppTheme"
@@ -21,12 +23,17 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
 
         <service
             android:name=".FloatingCapriService"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-visible floating assistant overlay" />
+        </service>
 
     </application>
 </manifest>
