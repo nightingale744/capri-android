@@ -18,7 +18,21 @@
       <small>PROJECT CAPRICORN // MOBILE</small>
     </div>
   </div>
-  <button id="settingsOpen" class="iconbtn" aria-label="Settings">⚙</button>
+
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button
+      id="floatingToggle"
+      class="iconbtn"
+      type="button"
+      aria-label="Start floating Capri"
+      onclick="if(window.CapriNative && typeof window.CapriNative.startFloatingMode === 'function') { window.CapriNative.startFloatingMode(); }">
+      FLOAT
+    </button>
+
+    <button id="settingsOpen" class="iconbtn" aria-label="Settings">
+      ⚙
+    </button>
+  </div>
 </header>
 
 <main>
