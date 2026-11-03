@@ -453,8 +453,6 @@ public boolean saveFishToken(String token) {
 
         return generator.generateKey();
     }
-
-    private JSONObject performChat(JSONObject input)
     
 private JSONObject performChat(JSONObject input)
         throws Exception {
