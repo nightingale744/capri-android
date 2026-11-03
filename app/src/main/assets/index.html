@@ -110,6 +110,36 @@
 
     <button id="saveSettings" class="primary wide">SAVE SETTINGS</button>
     <button id="testSettings" class="secondary wide">TEST CONNECTION</button>
+
+    <hr>
+
+    <div class="sheet-head">
+      <div>
+        <b>VOICE SETTINGS</b>
+        <small>Fish Audio // Capri voice</small>
+      </div>
+    </div>
+
+    <label>
+      FISH AUDIO ACCESS TOKEN
+      <input
+        id="fishToken"
+        type="password"
+        autocomplete="off"
+        placeholder="Paste your Fish Audio token">
+    </label>
+
+    <p class="warning">
+      Your token is sent to your private Cloudflare Worker. Android stores it using encrypted app storage. Never share your token or APK with the token configured.
+    </p>
+
+    <button id="saveFishToken" class="primary wide" type="button">
+      SAVE VOICE TOKEN
+    </button>
+
+    <p id="fishTokenStatus" class="hint" aria-live="polite">
+      Voice token not configured.
+    </p>
   </div>
 </div>
 
