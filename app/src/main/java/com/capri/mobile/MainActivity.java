@@ -146,20 +146,19 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void saveFishToken(String token) {
-            executor.execute(() -> {
-                try {
-                    saveEncryptedToken(token);
-                } catch (Exception e) {
-                    android.util.Log.e(
-                            "Capri",
-                            "Could not save Fish Audio token",
-                            e
-                    );
-                }
-            });
-        }
-
+public boolean saveFishToken(String token) {
+    try {
+        saveEncryptedToken(token);
+        return true;
+    } catch (Exception e) {
+        android.util.Log.e(
+                "Capri",
+                "Could not save Fish Audio token",
+                e
+        );
+        return false;
+    }
+}
         @JavascriptInterface
         public void speakFishAudio(String text) {
             if (text == null || text.trim().isEmpty()) return;
