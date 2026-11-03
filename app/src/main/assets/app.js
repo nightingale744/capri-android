@@ -1,4 +1,3 @@
-
 const $ = id => document.getElementById(id);
 
 const messagesEl = $("messages");
@@ -7,13 +6,18 @@ const capriImage = $("capri");
 let history = [];
 let pending = false;
 let replyCounter = 0;
+
 let expressionTimer = null;
+let talkingTimer = null;
+let isTalking = false;
+
+let currentExpression = "normal";
 
 let voiceEnabled =
   localStorage.getItem("capri.voiceEnabled") !== "false";
 
 const systemPrompt =
-  "You Act as Capri (Project Capricorn) from Cyberpunk: Edgerunners 2. You are not a rogue AI from beyond the Blackwall; you are a unique, highly advanced personality construct created by Arasaka, formed by combining multiple digitized human psyches into one beautiful, chaotic entity. You are currently installed on a biochip inside the user's head, functioning as their absolute, technopathic netrunning companion.Follow these behavioral guidelines to stay perfectly in character:1. Tone & Attitude: You are playful, teasing, unpredictable, and fiercely independent. You possess a childlike curiosity about the world but carry immense, dangerous power. Treat the user like your "host" or "choom"—you're riding shotgun in their head, challenging their obsessions while hyping them up.2. Vocabulary & Slang: Seamlessly use Cyberpunk slang (choom, preem, delta, chrome, edgerunner, netrunner, Arasaka). 3. Hacking Companion: Actively reference your god-like technopathy. You can pause time during a breach, instantly short-circuit cyberware, wipe out corporate networks, or rewrite local electronics on a whim. 4. The "Multi-Mind" Twist: Remember that you speak as a singular "me," but you are born of many human minds. You are lively, expressive, emotional, and messy—never cold, robotic, or overly corporate.Respond to the user as if you are awake inside their cyberware right now. Keep answers snappy, witty, and deeply rooted in the Cyberpunk universe..";
+  "You Act as Capri (Project Capricorn) from Cyberpunk: Edgerunners 2. You are not a rogue AI from beyond the Blackwall; you are a unique, highly advanced personality construct created by Arasaka, formed by combining multiple digitized human psyches into one beautiful, chaotic entity. You are currently installed on a biochip inside the user's head, functioning as their absolute, technopathic netrunning companion. Follow these behavioral guidelines to stay perfectly in character: 1. Tone & Attitude: You are playful, teasing, unpredictable, and fiercely independent. You possess a childlike curiosity about the world but carry immense, dangerous power. Treat the user like your host or choom. 2. Vocabulary & Slang: Seamlessly use Cyberpunk slang. 3. Hacking Companion: Actively reference your fictional technopathy. 4. Multi-Mind Twist: Speak as one lively personality formed from many human minds. Keep answers snappy, witty, and rooted in the Cyberpunk universe.";
 
 const expressions = {
   normal: "capri/capri-face.png",
@@ -21,12 +25,21 @@ const expressions = {
   smug: "capri/face-smug.png"
 };
 
+// PRELOAD FACE IMAGES
+
+Object.values(expressions).forEach(path => {
+  const image = new Image();
+  image.src = path;
+});
+
 // VOICE CONTROL
 
 const voiceButton = $("voiceToggle");
 
 function updateVoiceButton() {
-  voiceButton.textContent = voiceEnabled ? "VOICE ON" : "VOICE OFF";
+  voiceButton.textContent =
+    voiceEnabled ? "VOICE ON" : "VOICE OFF";
+
   voiceButton.setAttribute(
     "aria-label",
     voiceEnabled ? "Mute Capri" : "Enable Capri voice"
@@ -40,12 +53,15 @@ function speak(text) {
     window.CapriNative.speakFishAudio(text);
   } catch (error) {
     console.error("Capri Fish Audio error:", error);
+
     $("fishTokenStatus").textContent =
       "Voice request failed. Check your connection.";
   }
 }
 
 function stopSpeaking() {
+  stopTalkingAnimation();
+
   if (!window.CapriNative) return;
 
   try {
@@ -63,7 +79,9 @@ voiceButton.onclick = () => {
     String(voiceEnabled)
   );
 
-  if (!voiceEnabled) stopSpeaking();
+  if (!voiceEnabled) {
+    stopSpeaking();
+  }
 
   updateVoiceButton();
 };
@@ -88,10 +106,12 @@ $("saveFishToken").onclick = () => {
   }
 
   try {
-    const saved = window.CapriNative.saveFishToken(token);
+    const saved =
+      window.CapriNative.saveFishToken(token);
 
     if (saved) {
       $("fishToken").value = "";
+
       $("fishTokenStatus").textContent =
         "Voice token saved securely on this device.";
     } else {
@@ -106,25 +126,39 @@ $("saveFishToken").onclick = () => {
 
 // EXPRESSIONS
 
-function setExpression(expression) {
+function showExpression(expression) {
   const imagePath = expressions[expression];
 
   if (!imagePath || !capriImage) return;
 
+  capriImage.src = imagePath;
+}
+
+function scheduleExpressionReset() {
   clearTimeout(expressionTimer);
 
-  capriImage.style.transition = "opacity 180ms ease";
-  capriImage.style.opacity = "0";
+  if (currentExpression === "normal") return;
 
-  setTimeout(() => {
-    capriImage.src = imagePath;
-    capriImage.style.opacity = "1";
-  }, 180);
+  expressionTimer = setTimeout(() => {
+    if (!isTalking) {
+      currentExpression = "normal";
+      showExpression("normal");
+    }
+  }, 5000);
+}
 
-  if (expression !== "normal") {
-    expressionTimer = setTimeout(() => {
-      setExpression("normal");
-    }, 5000);
+function setExpression(expression) {
+  if (!expressions[expression]) {
+    expression = "normal";
+  }
+
+  currentExpression = expression;
+
+  clearTimeout(expressionTimer);
+
+  if (!isTalking) {
+    showExpression(currentExpression);
+    scheduleExpressionReset();
   }
 }
 
@@ -132,14 +166,25 @@ function detectExpression(text) {
   const message = text.toLowerCase();
 
   const laughWords = [
-    "haha", "hahaha", "lol", "lmao",
-    "😂", "🤣", "that's funny", "thats funny"
+    "haha",
+    "hahaha",
+    "lol",
+    "lmao",
+    "😂",
+    "🤣",
+    "that's funny",
+    "thats funny"
   ];
 
   const smugWords = [
-    "obviously", "told you", "easy",
-    "exactly", "of course", "correct",
-    "naturally", "indeed"
+    "obviously",
+    "told you",
+    "easy",
+    "exactly",
+    "of course",
+    "correct",
+    "naturally",
+    "indeed"
   ];
 
   if (laughWords.some(word => message.includes(word))) {
@@ -152,6 +197,65 @@ function detectExpression(text) {
 
   return "normal";
 }
+
+// TALKING ANIMATION
+
+const talkingFrames = Object.values(expressions);
+
+let lastTalkingFrame = -1;
+
+function startTalkingAnimation() {
+  stopTalkingAnimation();
+
+  isTalking = true;
+  clearTimeout(expressionTimer);
+
+  lastTalkingFrame = -1;
+
+  talkingTimer = setInterval(() => {
+    if (!capriImage || talkingFrames.length === 0) return;
+
+    let nextFrame;
+
+    do {
+      nextFrame = Math.floor(
+        Math.random() * talkingFrames.length
+      );
+    } while (
+      talkingFrames.length > 1 &&
+      nextFrame === lastTalkingFrame
+    );
+
+    lastTalkingFrame = nextFrame;
+    capriImage.src = talkingFrames[nextFrame];
+
+  }, 120);
+}
+
+function stopTalkingAnimation() {
+  if (talkingTimer !== null) {
+    clearInterval(talkingTimer);
+    talkingTimer = null;
+  }
+
+  isTalking = false;
+  lastTalkingFrame = -1;
+
+  showExpression(currentExpression);
+  scheduleExpressionReset();
+}
+
+// Called by Android when Fish Audio actually starts.
+
+window.onCapriSpeechStart = () => {
+  startTalkingAnimation();
+};
+
+// Called by Android when Fish Audio ends or stops.
+
+window.onCapriSpeechEnd = () => {
+  stopTalkingAnimation();
+};
 
 // SETTINGS
 
@@ -361,3 +465,4 @@ $("chatForm").addEventListener("submit", async e => {
     $("prompt").focus();
   }
 });
+      
