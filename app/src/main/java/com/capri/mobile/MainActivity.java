@@ -687,8 +687,62 @@ public class MainActivity extends Activity {
         String responseText = readText(stream);
         conn.disconnect();
 
-        JSONObject response;
+        
+JSONObject response;
 
-        try {
-            response = new JSONObject(responseText);
-        } catch (Exc
+try {
+    response = new JSONObject(responseText);
+} catch (Exception e) {
+    throw new Exception(
+            "Provider returned invalid JSON: "
+                    + responseText.substring(
+                            0,
+                            Math.min(responseText.length(), 500)
+                    )
+    );
+}
+
+JSONArray choices = response.optJSONArray("choices");
+
+if (choices == null || choices.length() == 0) {
+    throw new Exception(
+            "Provider returned no chat choices: " + responseText
+    );
+}
+
+JSONObject choice = choices.getJSONObject(0);
+JSONObject message = choice.optJSONObject("message");
+
+if (message == null) {
+    throw new Exception("Provider response has no message.");
+}
+
+String content = message.optString("content", "").trim();
+
+if (content.isEmpty()) {
+    throw new Exception("Provider returned an empty message.");
+}
+
+return content;
+}
+
+@Override
+protected void onDestroy() {
+    stopAudioPlayback();
+
+    if (tts != null) {
+        tts.stop();
+        tts.shutdown();
+        tts = null;
+    }
+
+    if (webView != null) {
+        webView.destroy();
+        webView = null;
+    }
+
+    executor.shutdownNow();
+
+    super.onDestroy();
+}
+}
