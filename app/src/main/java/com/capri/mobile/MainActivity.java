@@ -32,6 +32,7 @@ import java.security.KeyStore;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -55,11 +56,15 @@ public class MainActivity extends Activity {
     private final Handler mainHandler =
             new Handler(Looper.getMainLooper());
 
+    private final AtomicInteger audioRequestId =
+            new AtomicInteger(0);
+
     private TextToSpeech textToSpeech;
     private boolean ttsReady = false;
 
     private MediaPlayer mediaPlayer;
     private File currentAudioFile;
+    private boolean speechActive = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -99,6 +104,24 @@ public class MainActivity extends Activity {
 
         setContentView(webView);
         webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    private void notifySpeechStart() {
+        if (webView == null) return;
+
+        webView.evaluateJavascript(
+                "window.onCapriSpeechStart && window.onCapriSpeechStart()",
+                null
+        );
+    }
+
+    private void notifySpeechEnd() {
+        if (webView == null) return;
+
+        webView.evaluateJavascript(
+                "window.onCapriSpeechEnd && window.onCapriSpeechEnd()",
+                null
+        );
     }
 
     private class CapriBridge {
@@ -164,7 +187,18 @@ public class MainActivity extends Activity {
         public void speakFishAudio(String text) {
             if (text == null || text.trim().isEmpty()) return;
 
+            final int requestId =
+                    audioRequestId.incrementAndGet();
+
+            mainHandler.post(() -> {
+                if (requestId == audioRequestId.get()) {
+                    stopAudioPlayback();
+                }
+            });
+
             executor.execute(() -> {
+                File audioFile = null;
+
                 try {
                     String token = readEncryptedToken();
 
@@ -178,7 +212,7 @@ public class MainActivity extends Activity {
 
                     byte[] audio = requestFishAudio(text, token);
 
-                    File audioFile = File.createTempFile(
+                    audioFile = File.createTempFile(
                             "capri_voice_",
                             ".mp3",
                             getCacheDir()
@@ -189,9 +223,21 @@ public class MainActivity extends Activity {
                         out.write(audio);
                     }
 
-                    mainHandler.post(() -> playAudioFile(audioFile));
+                    final File readyFile = audioFile;
+
+                    mainHandler.post(() -> {
+                        if (requestId == audioRequestId.get()) {
+                            playAudioFile(readyFile);
+                        } else {
+                            readyFile.delete();
+                        }
+                    });
 
                 } catch (Exception e) {
+                    if (audioFile != null) {
+                        audioFile.delete();
+                    }
+
                     android.util.Log.e(
                             "Capri",
                             "Fish Audio request failed",
@@ -217,10 +263,13 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void stopSpeaking() {
+            audioRequestId.incrementAndGet();
+
             mainHandler.post(() -> {
                 if (textToSpeech != null) {
                     textToSpeech.stop();
                 }
+
                 stopAudioPlayback();
             });
         }
@@ -262,6 +311,7 @@ public class MainActivity extends Activity {
 
         if (status < 200 || status >= 300) {
             InputStream errorStream = conn.getErrorStream();
+
             String error = errorStream == null
                     ? "HTTP " + status
                     : readText(errorStream);
@@ -318,9 +368,20 @@ public class MainActivity extends Activity {
 
             mediaPlayer.setDataSource(file.getAbsolutePath());
 
-            mediaPlayer.setOnPreparedListener(player ->
-                    player.start()
-            );
+            mediaPlayer.setOnPreparedListener(player -> {
+                try {
+                    player.start();
+                    speechActive = true;
+                    notifySpeechStart();
+                } catch (Exception e) {
+                    android.util.Log.e(
+                            "Capri",
+                            "Could not start audio",
+                            e
+                    );
+                    stopAudioPlayback();
+                }
+            });
 
             mediaPlayer.setOnCompletionListener(player ->
                     stopAudioPlayback()
@@ -344,6 +405,11 @@ public class MainActivity extends Activity {
     }
 
     private void stopAudioPlayback() {
+        if (speechActive) {
+            speechActive = false;
+            notifySpeechEnd();
+        }
+
         if (mediaPlayer != null) {
             try {
                 if (mediaPlayer.isPlaying()) {
@@ -553,9 +619,7 @@ public class MainActivity extends Activity {
                 response.optJSONArray("choices");
 
         if (choices == null || choices.length() == 0) {
-            throw new Exception(
-                    "API response has no choices."
-            );
+            throw new Exception("API response has no choices.");
         }
 
         JSONObject choice = choices.optJSONObject(0);
@@ -597,6 +661,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        audioRequestId.incrementAndGet();
         stopAudioPlayback();
 
         if (textToSpeech != null) {
@@ -616,4 +681,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-                                                  }
+}
