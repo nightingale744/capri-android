@@ -88,18 +88,19 @@ $("saveFishToken").onclick = () => {
   }
 
   try {
-    window.CapriNative.saveFishToken(token);
+    const saved = window.CapriNative.saveFishToken(token);
 
-    $("fishToken").value = "";
-
-    $("fishTokenStatus").textContent =
-      "Save request sent to Android. Test voice with a chat reply.";
-
+    if (saved) {
+      $("fishToken").value = "";
+      $("fishTokenStatus").textContent =
+        "Voice token saved securely on this device.";
+    } else {
+      $("fishTokenStatus").textContent =
+        "Could not save token. Check the app logs.";
+    }
   } catch (error) {
-    console.error("Token save error:", error);
-
     $("fishTokenStatus").textContent =
-      "Could not send token to Android.";
+      "Could not save token: " + error.message;
   }
 };
 
