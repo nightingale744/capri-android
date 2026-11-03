@@ -273,11 +273,11 @@ $("settings").addEventListener("click", e => {
 
 $("baseUrl").value =
   localStorage.getItem("capri.baseUrl") ||
-  "https://api.openai.com/v1";
+  "https://api.groq.com/openai/v1";
 
 $("model").value =
   localStorage.getItem("capri.model") ||
-  "gpt-4o-mini";
+  "openai/gpt-oss-120b";
 
 $("saveSettings").onclick = () => {
   localStorage.setItem(
@@ -352,12 +352,20 @@ function sendNative(payload) {
 
       try {
         const parsed = JSON.parse(raw);
+if (parsed.error) {
+  reject(new Error(parsed.error));
+} else {
+  const content =
+    parsed.content ||
+    parsed.choices?.[0]?.message?.content ||
+    "";
 
-        if (parsed.error) {
-          reject(new Error(parsed.error));
-        } else {
-          resolve(parsed.content || "");
-        }
+  if (!content) {
+    reject(new Error("AI response contained no message."));
+  } else {
+    resolve(content);
+  }
+}
       } catch (error) {
         reject(error);
       }
