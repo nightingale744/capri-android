@@ -1,10 +1,16 @@
 
 package com.capri.mobile;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -47,6 +53,9 @@ public class MainActivity extends Activity {
     private static final String KEY_ALIAS = "CapriFishAudioKey";
     private static final String PREFS = "capri_secure_settings";
     private static final String TOKEN_KEY = "fish_token";
+
+    private static final int REQUEST_OVERLAY = 2001;
+    private static final int REQUEST_NOTIFICATIONS = 2002;
 
     private WebView webView;
 
@@ -106,6 +115,89 @@ public class MainActivity extends Activity {
         webView.loadUrl("file:///android_asset/index.html");
     }
 
+    // FLOATING MODE PERMISSIONS
+
+    private void requestFloatingPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            Intent intent = new Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName())
+            );
+
+            startActivityForResult(intent, REQUEST_OVERLAY);
+            return;
+        }
+
+        continueFloatingSetup();
+    }
+
+    private void continueFloatingSetup() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+
+            requestPermissions(
+                    new String[]{
+                            Manifest.permission.POST_NOTIFICATIONS
+                    },
+                    REQUEST_NOTIFICATIONS
+            );
+
+            return;
+        }
+
+        startFloatingService();
+    }
+
+    private void startFloatingService() {
+        if (!Settings.canDrawOverlays(this)) {
+            return;
+        }
+
+        Intent serviceIntent = new Intent(
+                this,
+                FloatingCapriService.class
+        );
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(
+            int requestCode,
+            int resultCode,
+            Intent data
+    ) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_OVERLAY) {
+            if (Settings.canDrawOverlays(this)) {
+                continueFloatingSetup();
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode,
+            String[] permissions,
+            int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(
+                requestCode,
+                permissions,
+                grantResults
+        );
+
+        if (requestCode == REQUEST_NOTIFICATIONS) {
+            startFloatingService();
+        }
+    }
+
     private void notifySpeechStart() {
         if (webView == null) return;
 
@@ -125,6 +217,13 @@ public class MainActivity extends Activity {
     }
 
     private class CapriBridge {
+
+        @JavascriptInterface
+        public void startFloatingMode() {
+            mainHandler.post(() ->
+                    requestFloatingPermission()
+            );
+        }
 
         @JavascriptInterface
         public void sendChat(String payload, String callbackId) {
@@ -592,93 +691,4 @@ public class MainActivity extends Activity {
 
         try {
             response = new JSONObject(responseText);
-        } catch (Exception e) {
-            throw new Exception(
-                    "API returned non-JSON data. HTTP " + status
-                    + ": " + responseText.substring(
-                            0, Math.min(300, responseText.length())
-                    )
-            );
-        }
-
-        if (status < 200 || status >= 300) {
-            Object error = response.opt("error");
-            String message = "HTTP " + status;
-
-            if (error instanceof JSONObject) {
-                message = ((JSONObject) error)
-                        .optString("message", message);
-            } else if (error instanceof String) {
-                message = (String) error;
-            }
-
-            throw new Exception(message);
-        }
-
-        org.json.JSONArray choices =
-                response.optJSONArray("choices");
-
-        if (choices == null || choices.length() == 0) {
-            throw new Exception("API response has no choices.");
-        }
-
-        JSONObject choice = choices.optJSONObject(0);
-
-        if (choice == null) {
-            throw new Exception("API returned an invalid choice.");
-        }
-
-        Object message = choice.opt("message");
-        String answer = "";
-
-        if (message instanceof JSONObject) {
-            answer = ((JSONObject) message)
-                    .optString("content", "");
-        } else if (message instanceof String) {
-            answer = (String) message;
-        }
-
-        if (answer.trim().isEmpty()) {
-            throw new Exception(
-                    "API returned no readable message."
-            );
-        }
-
-        JSONObject result = new JSONObject();
-        result.put("content", answer);
-
-        return result;
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        audioRequestId.incrementAndGet();
-        stopAudioPlayback();
-
-        if (textToSpeech != null) {
-            textToSpeech.stop();
-            textToSpeech.shutdown();
-            textToSpeech = null;
-        }
-
-        ttsReady = false;
-
-        if (webView != null) {
-            webView.destroy();
-            webView = null;
-        }
-
-        executor.shutdownNow();
-
-        super.onDestroy();
-    }
-}
+        } catch (Exc
