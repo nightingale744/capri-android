@@ -1,3 +1,4 @@
+
 package com.capri.mobile;
 
 import android.app.Service;
@@ -11,12 +12,17 @@ import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
+
+import java.io.InputStream;
+import java.util.Random;
 
 public class FloatingCapriService extends Service {
 
@@ -28,6 +34,7 @@ public class FloatingCapriService extends Service {
     private WindowManager windowManager;
     private ImageView capriFace;
     private WindowManager.LayoutParams params;
+
     private boolean expanded = false;
 
     private float startX;
@@ -35,6 +42,39 @@ public class FloatingCapriService extends Service {
     private float touchX;
     private float touchY;
     private long touchTime;
+
+    private final Handler handler =
+            new Handler(Looper.getMainLooper());
+
+    private final Random random = new Random();
+
+    private Bitmap normalFace;
+    private Bitmap laughFace;
+    private Bitmap smugFace;
+
+    private final Runnable idleExpression = new Runnable() {
+        @Override
+        public void run() {
+            if (capriFace == null) return;
+
+            int expression = random.nextInt(2);
+
+            if (expression == 0 && laughFace != null) {
+                capriFace.setImageBitmap(laughFace);
+            } else if (smugFace != null) {
+                capriFace.setImageBitmap(smugFace);
+            }
+
+            handler.postDelayed(() -> {
+                if (capriFace != null && normalFace != null) {
+                    capriFace.setImageBitmap(normalFace);
+                }
+
+                scheduleNextExpression();
+
+            }, 1800);
+        }
+    };
 
     @Override
     public void onCreate() {
@@ -48,18 +88,29 @@ public class FloatingCapriService extends Service {
             return;
         }
 
+        loadFaces();
         createFloatingFace();
+        scheduleNextExpression();
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null &&
-                ACTION_STOP.equals(intent.getAction())) {
-            stopSelf();
-            return START_NOT_STICKY;
-        }
+    private void loadFaces() {
+        normalFace = loadBitmap("capri/capri-face.png");
+        laughFace = loadBitmap("capri/face-laugh.png");
+        smugFace = loadBitmap("capri/face-smug.png");
+    }
 
-        return START_STICKY;
+    private Bitmap loadBitmap(String path) {
+        try (InputStream input = getAssets().open(path)) {
+            return BitmapFactory.decodeStream(input);
+        } catch (Exception e) {
+            android.util.Log.e("Capri", "Could not load " + path, e);
+            return null;
+        }
+    }
+
+    private void scheduleNextExpression() {
+        int delay = 5000 + random.nextInt(6000);
+        handler.postDelayed(idleExpression, delay);
     }
 
     private void createNotificationChannel() {
@@ -129,18 +180,12 @@ public class FloatingCapriService extends Service {
 
         capriFace = new ImageView(this);
 
-        try {
-            Bitmap bitmap = BitmapFactory.decodeStream(
-                    getAssets().open("capri/capri-face.png")
-            );
-
-            capriFace.setImageBitmap(bitmap);
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (normalFace == null) {
             stopSelf();
             return;
         }
 
+        capriFace.setImageBitmap(normalFace);
         capriFace.setScaleType(ImageView.ScaleType.FIT_CENTER);
 
         int size = dp(76);
@@ -226,7 +271,7 @@ public class FloatingCapriService extends Service {
 
     @Override
     public void onDestroy() {
-        super.onDestroy();
+        handler.removeCallbacksAndMessages(null);
 
         if (windowManager != null && capriFace != null) {
             try {
@@ -235,11 +280,16 @@ public class FloatingCapriService extends Service {
             }
         }
 
+        if (normalFace != null) normalFace.recycle();
+        if (laughFace != null) laughFace.recycle();
+        if (smugFace != null) smugFace.recycle();
+
         stopForeground(true);
+        super.onDestroy();
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
-  }
+}
