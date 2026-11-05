@@ -137,8 +137,12 @@ public int onStartCommand(Intent intent, int flags, int startId) {
 }
 
     private void scheduleNextExpression() {
-        int delay = 5000 + random.nextInt(6000);
-        handler.postDelayed(idleExpression, delay);
+    handler.removeCallbacks(idleExpression);
+
+    if (speaking || capriFace == null) return;
+
+    int delay = 5000 + random.nextInt(6000);
+    handler.postDelayed(idleExpression, delay);
     }
 private void showFloatingExpression(String expression) {
     if (capriFace == null || speaking) return;
@@ -164,7 +168,7 @@ private void showFloatingExpression(String expression) {
 private final Runnable speechAnimation = new Runnable() {
     @Override
     public void run() {
-        if (!speaking || capriFace == null) return;
+    if (capriFace == null || speaking) return;
 
         Bitmap frame = random.nextBoolean()
                 ? laughFace : smugFace;
