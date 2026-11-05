@@ -28,14 +28,25 @@ public class FloatingCapriService extends Service {
 
     private static final String CHANNEL_ID = "capri_floating";
     private static final int NOTIFICATION_ID = 1001;
+
     private static final String ACTION_STOP =
             "com.capri.mobile.STOP_FLOATING";
+
+    private static final String ACTION_EXPRESSION =
+            "com.capri.mobile.EXPRESSION";
+
+    private static final String ACTION_SPEECH_START =
+            "com.capri.mobile.SPEECH_START";
+
+    private static final String ACTION_SPEECH_END =
+            "com.capri.mobile.SPEECH_END";
 
     private WindowManager windowManager;
     private ImageView capriFace;
     private WindowManager.LayoutParams params;
 
     private boolean expanded = false;
+    private boolean speaking = false;
 
     private float startX;
     private float startY;
@@ -55,24 +66,51 @@ public class FloatingCapriService extends Service {
     private final Runnable idleExpression = new Runnable() {
         @Override
         public void run() {
-            if (capriFace == null) return;
+            if (capriFace == null || speaking) return;
 
-            int expression = random.nextInt(2);
+            Bitmap frame = random.nextBoolean()
+                    ? laughFace : smugFace;
 
-            if (expression == 0 && laughFace != null) {
-                capriFace.setImageBitmap(laughFace);
-            } else if (smugFace != null) {
-                capriFace.setImageBitmap(smugFace);
+            if (frame != null) {
+                capriFace.setImageBitmap(frame);
             }
 
             handler.postDelayed(() -> {
-                if (capriFace != null && normalFace != null) {
+                if (capriFace != null && !speaking
+                        && normalFace != null) {
                     capriFace.setImageBitmap(normalFace);
                 }
 
                 scheduleNextExpression();
-
             }, 1800);
+        }
+    };
+
+    private final Runnable speechAnimation = new Runnable() {
+        @Override
+        public void run() {
+            if (capriFace == null || !speaking) return;
+
+            Bitmap frame = random.nextBoolean()
+                    ? laughFace : smugFace;
+
+            if (frame != null) {
+                capriFace.setImageBitmap(frame);
+            }
+
+            handler.postDelayed(this, 180);
+        }
+    };
+
+    private final Runnable expressionReset = new Runnable() {
+        @Override
+        public void run() {
+            if (capriFace != null && !speaking
+                    && normalFace != null) {
+                capriFace.setImageBitmap(normalFace);
+            }
+
+            scheduleNextExpression();
         }
     };
 
@@ -93,6 +131,31 @@ public class FloatingCapriService extends Service {
         scheduleNextExpression();
     }
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent == null) return START_STICKY;
+
+        String action = intent.getAction();
+
+        if (ACTION_STOP.equals(action)) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        if (ACTION_EXPRESSION.equals(action)) {
+            String expression =
+                    intent.getStringExtra("expression");
+
+            showFloatingExpression(expression);
+        } else if (ACTION_SPEECH_START.equals(action)) {
+            startFloatingSpeechAnimation();
+        } else if (ACTION_SPEECH_END.equals(action)) {
+            stopFloatingSpeechAnimation();
+        }
+
+        return START_STICKY;
+    }
+
     private void loadFaces() {
         normalFace = loadBitmap("capri/capri-face.png");
         laughFace = loadBitmap("capri/face-laugh.png");
@@ -103,101 +166,63 @@ public class FloatingCapriService extends Service {
         try (InputStream input = getAssets().open(path)) {
             return BitmapFactory.decodeStream(input);
         } catch (Exception e) {
-            android.util.Log.e("Capri", "Could not load " + path, e);
+            android.util.Log.e(
+                    "Capri",
+                    "Could not load " + path,
+                    e
+            );
             return null;
         }
     }
-    @Override
-public int onStartCommand(Intent intent, int flags, int startId) {
-    if (intent == null) return START_STICKY;
-
-    String action = intent.getAction();
-
-    if (ACTION_STOP.equals(action)) {
-        stopSelf();
-        return START_NOT_STICKY;
-    }
-
-    if (ACTION_EXPRESSION.equals(action)) {
-        String expression =
-                intent.getStringExtra("expression");
-
-        showFloatingExpression(expression);
-    }
-
-    if (ACTION_SPEECH_START.equals(action)) {
-        startFloatingSpeechAnimation();
-    }
-
-    if (ACTION_SPEECH_END.equals(action)) {
-        stopFloatingSpeechAnimation();
-    }
-
-    return START_STICKY;
-}
 
     private void scheduleNextExpression() {
-    handler.removeCallbacks(idleExpression);
+        handler.removeCallbacks(idleExpression);
 
-    if (speaking || capriFace == null) return;
+        if (speaking || capriFace == null) return;
 
-    int delay = 5000 + random.nextInt(6000);
-    handler.postDelayed(idleExpression, delay);
-    }
-private void showFloatingExpression(String expression) {
-    if (capriFace == null || speaking) return;
-
-    handler.removeCallbacks(idleExpression);
-
-    if ("laugh".equals(expression) && laughFace != null) {
-        capriFace.setImageBitmap(laughFace);
-    } else if ("smug".equals(expression) && smugFace != null) {
-        capriFace.setImageBitmap(smugFace);
-    } else if (normalFace != null) {
-        capriFace.setImageBitmap(normalFace);
+        int delay = 5000 + random.nextInt(6000);
+        handler.postDelayed(idleExpression, delay);
     }
 
-    handler.postDelayed(() -> {
-        if (!speaking && capriFace != null) {
+    private void showFloatingExpression(String expression) {
+        if (capriFace == null || speaking) return;
+
+        handler.removeCallbacks(idleExpression);
+        handler.removeCallbacks(expressionReset);
+
+        if ("laugh".equals(expression) && laughFace != null) {
+            capriFace.setImageBitmap(laughFace);
+        } else if ("smug".equals(expression) && smugFace != null) {
+            capriFace.setImageBitmap(smugFace);
+        } else if (normalFace != null) {
             capriFace.setImageBitmap(normalFace);
-            scheduleNextExpression();
-        }
-    }, 3000);
-}
-
-private final Runnable speechAnimation = new Runnable() {
-    @Override
-    public void run() {
-    if (capriFace == null || speaking) return;
-
-        Bitmap frame = random.nextBoolean()
-                ? laughFace : smugFace;
-
-        if (frame != null) {
-            capriFace.setImageBitmap(frame);
         }
 
-        handler.postDelayed(this, 180);
-    }
-};
-
-private void startFloatingSpeechAnimation() {
-    speaking = true;
-    handler.removeCallbacks(idleExpression);
-    handler.removeCallbacks(speechAnimation);
-    speechAnimation.run();
-}
-
-private void stopFloatingSpeechAnimation() {
-    speaking = false;
-    handler.removeCallbacks(speechAnimation);
-
-    if (capriFace != null && normalFace != null) {
-        capriFace.setImageBitmap(normalFace);
+        handler.postDelayed(expressionReset, 3000);
     }
 
-    scheduleNextExpression();
-}
+    private void startFloatingSpeechAnimation() {
+        speaking = true;
+
+        handler.removeCallbacks(idleExpression);
+        handler.removeCallbacks(expressionReset);
+        handler.removeCallbacks(speechAnimation);
+
+        speechAnimation.run();
+    }
+
+    private void stopFloatingSpeechAnimation() {
+        speaking = false;
+
+        handler.removeCallbacks(speechAnimation);
+
+        if (capriFace != null && normalFace != null) {
+            capriFace.setImageBitmap(normalFace);
+        }
+
+        scheduleNextExpression();
+    }
+
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
@@ -206,7 +231,9 @@ private void stopFloatingSpeechAnimation() {
                     NotificationManager.IMPORTANCE_LOW
             );
 
-            channel.setDescription("Controls for floating Capri");
+            channel.setDescription(
+                    "Controls for floating Capri"
+            );
 
             NotificationManager manager =
                     getSystemService(NotificationManager.class);
@@ -216,24 +243,19 @@ private void stopFloatingSpeechAnimation() {
     }
 
     private void startCapriForeground() {
-        Intent stopIntent = new Intent(this, FloatingCapriService.class);
+        Intent stopIntent =
+                new Intent(this, FloatingCapriService.class);
+
         stopIntent.setAction(ACTION_STOP);
-        private static final String ACTION_EXPRESSION =
-        "com.capri.mobile.EXPRESSION";
 
-private static final String ACTION_SPEECH_START =
-        "com.capri.mobile.SPEECH_START";
-
-private static final String ACTION_SPEECH_END =
-        "com.capri.mobile.SPEECH_END";
-
-        PendingIntent stopPendingIntent = PendingIntent.getService(
-                this,
-                1,
-                stopIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT |
-                        PendingIntent.FLAG_IMMUTABLE
-        );
+        PendingIntent stopPendingIntent =
+                PendingIntent.getService(
+                        this,
+                        1,
+                        stopIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT |
+                                PendingIntent.FLAG_IMMUTABLE
+                );
 
         Notification.Builder builder;
 
@@ -245,7 +267,9 @@ private static final String ACTION_SPEECH_END =
 
         Notification notification = builder
                 .setContentTitle("Capri is floating")
-                .setContentText("Tap Stop to close the floating assistant.")
+                .setContentText(
+                        "Tap Stop to close the floating assistant."
+                )
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .addAction(
                         android.R.drawable.ic_menu_close_clear_cancel,
@@ -313,11 +337,13 @@ private static final String ACTION_SPEECH_END =
                 return true;
 
             case MotionEvent.ACTION_MOVE:
-                params.x = (int) (startX +
-                        event.getRawX() - touchX);
+                params.x = (int) (
+                        startX + event.getRawX() - touchX
+                );
 
-                params.y = (int) (startY +
-                        event.getRawY() - touchY);
+                params.y = (int) (
+                        startY + event.getRawY() - touchY
+                );
 
                 windowManager.updateViewLayout(capriFace, params);
                 return true;
@@ -334,9 +360,9 @@ private static final String ACTION_SPEECH_END =
                 long duration =
                         System.currentTimeMillis() - touchTime;
 
-                if (distanceX < dp(10) &&
-                        distanceY < dp(10) &&
-                        duration < 500) {
+                if (distanceX < dp(10)
+                        && distanceY < dp(10)
+                        && duration < 500) {
                     toggleSize();
                 }
 
@@ -347,7 +373,7 @@ private static final String ACTION_SPEECH_END =
     }
 
     private void toggleSize() {
-        expanded = !expanded;private boolean speaking = false;
+        expanded = !expanded;
 
         int size = expanded ? dp(160) : dp(76);
 
@@ -358,8 +384,10 @@ private static final String ACTION_SPEECH_END =
     }
 
     private int dp(int value) {
-        return (int) (value *
-                getResources().getDisplayMetrics().density);
+        return (int) (
+                value * getResources()
+                        .getDisplayMetrics().density
+        );
     }
 
     @Override
@@ -385,4 +413,4 @@ private static final String ACTION_SPEECH_END =
     public IBinder onBind(Intent intent) {
         return null;
     }
-}
+    }
