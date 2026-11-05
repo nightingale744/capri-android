@@ -224,7 +224,23 @@ public class MainActivity extends Activity {
                     requestFloatingPermission()
             );
         }
+        
+@JavascriptInterface
+public void setFloatingExpression(String expression) {
+    Intent intent = new Intent(
+            MainActivity.this,
+            FloatingCapriService.class
+    );
 
+    intent.setAction("com.capri.mobile.EXPRESSION");
+    intent.putExtra("expression", expression);
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        startForegroundService(intent);
+    } else {
+        startService(intent);
+    }
+}
         @JavascriptInterface
         public void sendChat(String payload, String callbackId) {
             executor.execute(() -> {
