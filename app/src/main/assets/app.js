@@ -156,6 +156,15 @@ function setExpression(expression) {
 
   clearTimeout(expressionTimer);
 
+  if (window.CapriNative &&
+      typeof window.CapriNative.setFloatingExpression === "function") {
+    try {
+      window.CapriNative.setFloatingExpression(expression);
+    } catch (error) {
+      console.error("Floating expression error:", error);
+    }
+  }
+
   if (!isTalking) {
     showExpression(currentExpression);
     scheduleExpressionReset();
