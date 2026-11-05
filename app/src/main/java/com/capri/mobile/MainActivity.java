@@ -199,22 +199,49 @@ public class MainActivity extends Activity {
     }
 
     private void notifySpeechStart() {
-        if (webView == null) return;
-
+    if (webView != null) {
         webView.evaluateJavascript(
                 "window.onCapriSpeechStart && window.onCapriSpeechStart()",
                 null
         );
     }
 
-    private void notifySpeechEnd() {
-        if (webView == null) return;
+    sendFloatingAction(
+            "com.capri.mobile.SPEECH_START"
+    );
+}
 
+private void notifySpeechEnd() {
+    if (webView != null) {
         webView.evaluateJavascript(
                 "window.onCapriSpeechEnd && window.onCapriSpeechEnd()",
                 null
         );
     }
+
+    sendFloatingAction(
+            "com.capri.mobile.SPEECH_END"
+    );
+}
+
+private void sendFloatingAction(String action) {
+    Intent intent = new Intent(
+            this,
+            FloatingCapriService.class
+    );
+
+    intent.setAction(action);
+
+    try {
+        startService(intent);
+    } catch (Exception e) {
+        android.util.Log.e(
+                "Capri",
+                "Floating action failed",
+                e
+        );
+    }
+}
 
     private class CapriBridge {
 
