@@ -107,12 +107,93 @@ public class FloatingCapriService extends Service {
             return null;
         }
     }
+    @Override
+public int onStartCommand(Intent intent, int flags, int startId) {
+    if (intent == null) return START_STICKY;
+
+    String action = intent.getAction();
+
+    if (ACTION_STOP.equals(action)) {
+        stopSelf();
+        return START_NOT_STICKY;
+    }
+
+    if (ACTION_EXPRESSION.equals(action)) {
+        String expression =
+                intent.getStringExtra("expression");
+
+        showFloatingExpression(expression);
+    }
+
+    if (ACTION_SPEECH_START.equals(action)) {
+        startFloatingSpeechAnimation();
+    }
+
+    if (ACTION_SPEECH_END.equals(action)) {
+        stopFloatingSpeechAnimation();
+    }
+
+    return START_STICKY;
+}
 
     private void scheduleNextExpression() {
         int delay = 5000 + random.nextInt(6000);
         handler.postDelayed(idleExpression, delay);
     }
+private void showFloatingExpression(String expression) {
+    if (capriFace == null || speaking) return;
 
+    handler.removeCallbacks(idleExpression);
+
+    if ("laugh".equals(expression) && laughFace != null) {
+        capriFace.setImageBitmap(laughFace);
+    } else if ("smug".equals(expression) && smugFace != null) {
+        capriFace.setImageBitmap(smugFace);
+    } else if (normalFace != null) {
+        capriFace.setImageBitmap(normalFace);
+    }
+
+    handler.postDelayed(() -> {
+        if (!speaking && capriFace != null) {
+            capriFace.setImageBitmap(normalFace);
+            scheduleNextExpression();
+        }
+    }, 3000);
+}
+
+private final Runnable speechAnimation = new Runnable() {
+    @Override
+    public void run() {
+        if (!speaking || capriFace == null) return;
+
+        Bitmap frame = random.nextBoolean()
+                ? laughFace : smugFace;
+
+        if (frame != null) {
+            capriFace.setImageBitmap(frame);
+        }
+
+        handler.postDelayed(this, 180);
+    }
+};
+
+private void startFloatingSpeechAnimation() {
+    speaking = true;
+    handler.removeCallbacks(idleExpression);
+    handler.removeCallbacks(speechAnimation);
+    speechAnimation.run();
+}
+
+private void stopFloatingSpeechAnimation() {
+    speaking = false;
+    handler.removeCallbacks(speechAnimation);
+
+    if (capriFace != null && normalFace != null) {
+        capriFace.setImageBitmap(normalFace);
+    }
+
+    scheduleNextExpression();
+}
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
@@ -133,6 +214,14 @@ public class FloatingCapriService extends Service {
     private void startCapriForeground() {
         Intent stopIntent = new Intent(this, FloatingCapriService.class);
         stopIntent.setAction(ACTION_STOP);
+        private static final String ACTION_EXPRESSION =
+        "com.capri.mobile.EXPRESSION";
+
+private static final String ACTION_SPEECH_START =
+        "com.capri.mobile.SPEECH_START";
+
+private static final String ACTION_SPEECH_END =
+        "com.capri.mobile.SPEECH_END";
 
         PendingIntent stopPendingIntent = PendingIntent.getService(
                 this,
@@ -254,7 +343,7 @@ public class FloatingCapriService extends Service {
     }
 
     private void toggleSize() {
-        expanded = !expanded;
+        expanded = !expanded;private boolean speaking = false;
 
         int size = expanded ? dp(160) : dp(76);
 
